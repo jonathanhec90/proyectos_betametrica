@@ -1,0 +1,110 @@
+---
+title: "Proyecto Mod. 2"
+author: "Jonathan Hernandez"
+date: "2024-05-22"
+output: html_document
+---
+# Trabajo Final Módulo 2
+
+### 1) Cargar librerias
+```{r Librerias, echo=TRUE, message=F, warning=F, comment=""}
+library(openxlsx)
+library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(dplyr)
+library(gganimate)
+library(animation)
+library(dygraphs)
+library(forecast)
+library(magrittr)
+library(tidyr)
+```
+
+### 2) Cargar Base de Datos
+```{r Dataupload, echo=T}
+bce <- read.xlsx("C:\\Users\\jhernande\\OneDrive\\Documentos\\Jonathan\\Cursos\\Experto Ciencia de Datos\\Módulo 2\\Proyecto final\\MODULO2_TFINAL.xlsx",sheet = "Hoja1",detectDates = T)
+
+```
+
+### 3) Realiza un gráfico de barras NO apiladas para 2 variables que tengan sentido analizar, por ejemplo: exportaciones e importaciones; crédito y depósitos, etc.
+```{r Barrasnoapiladas,echo=T}
+#Seleccionar variables Reservas internacionales y Exportaciones
+bce2 <- bce %>% 
+  mutate(Año=year(bce$PERIODO),
+         Mes=month(bce$PERIODO)) %>% 
+  select(Año,everything()) %>% 
+  select(,-Mes,-PERIODO,-IMPORTACIONES_B.CONSUMO,-IMPORTACIONES_M.PRIMAS,-IMPORTACIONES_B.CAPITAL) %>% 
+  group_by(Año)
+
+#Transformar a datalong
+data_long <- bce2 %>%
+  gather(key = "Variable", value = "Value", -Año)
+
+
+#Gráfico
+ggplot(data_long, aes(x = Año, y = Value, fill = Variable)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Gráfico de Barras No Apiladas para dos Variables",
+       x = "Categoría",
+       y = "Valor") +
+  theme_minimal()+
+  labs(title="Evolución de las exportaciones del Ecuador",subtitle = "En miles de millones",
+       caption = "Fuente: BCE\n Elaboración: Autor")
+
+```
+
+### 4) Escoge 2 variables y realiza un gráfico de líneas en dos cuadros (usando facet). Este gráfico debe incorporar la linea de tendencia para las dos variables.
+```{r graficolinea, echo=T}
+
+melt1 <- melt(bce2, id.vars = "Año")
+
+
+ggplot(melt1, aes(x=Año, y=value))+
+  geom_line()+facet_grid(.~variable,scales ="free")+
+  geom_smooth(method = "lm")
+
+```
+
+### 5) Prueba generando un gráfico usando dygraphs o plotly
+```{r dygraph, echo=TRUE}
+
+bce$PERIODO <- seq(as.Date("2020/03/01"),
+                     as.Date("2023/12/01"),
+                     by="month")
+
+datosdybce <- bce %>% 
+  select(IMPORTACIONES_B.CONSUMO,IMPORTACIONES_M.PRIMAS,IMPORTACIONES_B.CAPITAL)
+
+tsdatosbce <- ts(datosdybce,start = c(2020,3),frequency=12)
+
+dygraph(tsdatosbce,main="Evolución de las Importaciones de Ecuador",xlab="Periodo",ylab="millones de USD") %>%
+  dyOptions(fillGraph=T,fillAlpha=0.04,drawPoints=T,pointSize=3)
+```
+
+### Realizar gráfico de Boxplot Melt
+```{r Boxplotmelt, echo=T}
+datosagrupados2 <-  bce %>% 
+  mutate(anio=year(PERIODO),
+         mes=month(PERIODO)) %>% 
+  select(anio,mes,everything()) %>% 
+  select(,-PERIODO) %>% 
+  group_by(anio)
+
+#agrupar datos
+magrupados <- melt(datosagrupados2,
+id.vars=c("anio","mes"))
+
+#Creamos gráfico
+ggplot(magrupados,
+       aes(x=factor(anio),y=value,fill=variable))+
+  geom_boxplot()+facet_wrap(~variable,scales="free")+
+  geom_jitter(width=0.1,alpha=0.2,aes(color=variable))+
+  theme(legend.position="bottom",
+        axis.text.x = element_text(angle=90,hjust=1))
+```
+
+
+
+
+
